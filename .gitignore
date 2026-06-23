@@ -269,6 +269,3 @@ extensions/diffs-language-pack/assets/viewer-runtime.js
 /.opengrep-out/
 /.crabbox-artifacts
 .comux*
-
-# OMX local runtime artifacts
-.omx/
