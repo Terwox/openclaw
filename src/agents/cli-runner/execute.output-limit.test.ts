@@ -89,6 +89,7 @@ describe("CLI stream-json output limit", () => {
   it.each(["before", "after"] as const)(
     "stops a supervised CLI when the line limit trips %s spawn settles",
     async (when) => {
+      const waiting = createDeferred();
       const exited = createDeferred();
       const cancelledExit = {
         reason: "manual-cancel" as const,
@@ -102,6 +103,7 @@ describe("CLI stream-json output limit", () => {
       };
       const managedRun = createManagedRun(cancelledExit);
       managedRun.wait.mockImplementation(async () => {
+        waiting.resolve();
         await exited.promise;
         return cancelledExit;
       });
@@ -118,7 +120,7 @@ describe("CLI stream-json output limit", () => {
 
       const run = executePreparedCliRun(buildClaudeStreamJsonRunContext(`run-limit-${when}`));
       if (when === "after") {
-        await vi.waitFor(() => expect(managedRun.wait).toHaveBeenCalled());
+        await waiting.promise;
         spawnInput?.onStdout?.(oversizedLine);
       }
 
@@ -139,6 +141,8 @@ describe("CLI stream-json output limit", () => {
     let yielded = 0;
     let closed = false;
     let aborted = false;
+    // Plugin transports still resolve the backend executable; keep that off the host PATH.
+    context.preparedBackend.backend.command = process.execPath;
     context.executionTarget = {
       kind: "plugin",
       async *execute(execution) {
